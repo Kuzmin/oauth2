@@ -75,7 +75,21 @@ func (t *Token) Type() string {
 // This method is unnecessary when using Transport or an HTTP Client
 // returned by this package.
 func (t *Token) SetAuthHeader(r *http.Request) {
-	r.Header.Set("Authorization", t.Type()+" "+t.AccessToken)
+	if t.Type() == "MAC" {
+		macKey, ok := t.Extra("MacKey").(string)
+		if !ok {
+			panic("MacKey malformed or missing")
+		}
+
+		macAlgorithm, ok := t.Extra("MacAlgorithm").(string)
+		if !ok {
+			panic("MacAlgorithm malformed or missing")
+		}
+
+		internal.AddHMACOauthToHeader(r, t.AccessToken, macKey, macAlgorithm)
+	} else {
+		r.Header.Set("Authorization", t.Type()+" "+t.AccessToken)
+	}
 }
 
 // WithExtra returns a new Token that's a clone of t, but using the

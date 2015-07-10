@@ -3,6 +3,7 @@ package oauth2
 import (
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 	"time"
 )
@@ -41,7 +42,6 @@ func TestTransportTokenSourceTypes(t *testing.T) {
 		want string
 	}{
 		{key: "bearer", val: val, want: "Bearer abc"},
-		{key: "mac", val: val, want: "MAC abc"},
 		{key: "basic", val: val, want: "Basic abc"},
 	}
 	for _, tc := range tests {
@@ -63,6 +63,42 @@ func TestTransportTokenSourceTypes(t *testing.T) {
 		client := http.Client{Transport: tr}
 		client.Get(server.URL)
 	}
+}
+
+func TestMacToken(t *testing.T) {
+	const accessToken = "abc"
+	const macKey = "def"
+	const algorithm = "hmac-sha-256"
+
+	token := &Token{
+		AccessToken: accessToken,
+		TokenType:   "mac",
+	}
+
+	token = token.WithExtra(map[string]interface{}{
+		"MacKey":       macKey,
+		"MacAlgorithm": algorithm,
+	})
+
+	ts := &tokenSource{
+		token: token,
+	}
+	tr := &Transport{
+		Source: ts,
+	}
+
+	server := newMockServer(func(w http.ResponseWriter, r *http.Request) {
+		header := r.Header.Get("Authorization")
+
+		pattern := "^MAC id=\"" + accessToken + "\", ts=\"[0-9]+?\", nonce=\"[0-9a-zA-Z]+?\", mac=\"[^-A-Za-z0-9+/=]|=[^=]|={3,}\"$"
+
+		if match, _ := regexp.Match(pattern, []byte(header)); !match {
+			t.Errorf("Authorization header (%s) not matching MAC header format (%s)", header, pattern)
+		}
+	})
+	defer server.Close()
+	client := http.Client{Transport: tr}
+	client.Get(server.URL)
 }
 
 func TestTokenValidNoAccessToken(t *testing.T) {
