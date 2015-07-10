@@ -16,7 +16,7 @@ import (
 	"sync"
 
 	"golang.org/x/net/context"
-	"./internal"
+	"github.com/Kuzmin/oauth2/internal"
 )
 
 // NoContext is the default context you should supply if not using

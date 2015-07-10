@@ -12,7 +12,7 @@ import (
 	"log"
 
 	"golang.org/x/net/context"
-	"./internal"
+	"github.com/Kuzmin/oauth2/internal"
 )
 
 // expiryDelta determines how earlier a token should be considered
